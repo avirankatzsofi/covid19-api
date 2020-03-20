@@ -3,7 +3,7 @@ const express = require('express')
 const PORT = process.env.PORT || 5000
 const mongoose = require('mongoose')
 const CronJob = require('cron').CronJob
-const {getCountryNameBySnapshot, fetchData} = require ('./helpers')
+const { getCountryNameBySnapshot, fetchData } = require('./helpers')
 
 mongoose.connect(process.env.MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true })
 
@@ -31,8 +31,21 @@ new CronJob('0 0 * * * *', fetchDataAndUpdateDb).start()
 
 express()
   .get('/country/:code', async (req, res) => {
+    const before = req.query.before && new Date(req.query.before)
+    const after = req.query.after && new Date(req.query.after)
+    let timestampFilter = {timestamp: {}}
+    if (before) {
+      timestampFilter.timestamp.$lte = before
+    } 
+    if (after) {
+      timestampFilter.timestamp.$gte = after
+    }
     const code = req.params.code.toUpperCase()
-    const country = await Country.findOne({code},{_id:0,__v:0}).populate('snapshots','deaths timestamp cases todayCases todayDeaths recovered active critical -_id')
+    const country = await Country.findOne({ code }, { _id: 0, __v: 0 }).populate(
+        'snapshots', 
+        'deaths timestamp cases todayCases todayDeaths recovered active critical -_id', 
+        timestampFilter
+    )
     res.json(country)
   })
   .listen(PORT, () => console.log(`Listening on ${PORT}`))
@@ -47,9 +60,9 @@ async function fetchDataAndUpdateDb() {
       timestamp
     })
     try {
-      const country = await Country.findOneAndUpdate({name: countryName}, {$push: {snapshots: snapshot._id}},{useFindAndModify: false})
+      const country = await Country.findOneAndUpdate({ name: countryName }, { $push: { snapshots: snapshot._id } }, { useFindAndModify: false })
       if (!country) {
-        console.info('no country for',countryName)
+        console.info('no country for', countryName)
         continue
       }
       snapshot.country = country._id
