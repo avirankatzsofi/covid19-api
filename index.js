@@ -1,4 +1,5 @@
 require('dotenv').config()
+const cors = require('cors')
 const express = require('express')
 const PORT = process.env.PORT || 5000
 const mongoose = require('mongoose')
@@ -30,6 +31,7 @@ const Snapshot = mongoose.model('Snapshot', snapshotSchema)
 new CronJob('0 0 * * * *', fetchDataAndUpdateDb).start()
 
 express()
+  .use(cors())
   .get('/country/:code', async (req, res) => {
     const before = req.query.before && new Date(req.query.before)
     const after = req.query.after && new Date(req.query.after)
@@ -44,7 +46,7 @@ express()
     const country = await Country.findOne({ code }, { _id: 0, __v: 0 }).populate(
         'snapshots', 
         'deaths timestamp cases todayCases todayDeaths recovered active critical -_id', 
-        timestampFilter
+        (before || after) ? timestampFilter : {}
     )
     res.json(country)
   })
