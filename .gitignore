@@ -7,9 +7,5 @@ npm-debug.log
 *.dev
 .DS_Store
 
-# Docker
-Dockerfile
-docker-compose.yml
-
 #pm2
 ecosystem.config.js

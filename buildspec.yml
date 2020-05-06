@@ -1,0 +1,33 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: 18
+    commands:
+
+      - cat /proc/version
+      - apt-get update
+
+  pre_build:
+
+    commands:
+      - $(aws ecr get-login --region eu-west-1 --no-include-email)
+
+  build:
+
+    commands:
+      - echo Build started on `date`
+      # Building backend container
+      - docker build -t covid19 .
+      - echo '#!/bin/bash' > /usr/local/bin/ok; echo 'if [[ "$CODEBUILD_BUILD_SUCCEEDING" == "0" ]]; then exit 1; else exit 0; fi' >> /usr/local/bin/ok; chmod +x /usr/local/bin/ok
+
+  post_build:
+
+    commands:
+      - echo Build completed on `date`
+      # Build backend docker
+      - docker tag covid19 $REGISTRY/covid19:latest
+      - docker push $REGISTRY/covid19:latest
+
+      - echo "Docker containers images uploaded"
